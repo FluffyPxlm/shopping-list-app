@@ -1,46 +1,82 @@
 import React, { useState } from 'react';
-import ShoppingListDetail from './pages/ShoppingListDetail';
+import { initialLists } from './data/shoppingListData';
+import ShoppingListView from './pages/ShoppingListView';
+import ShoppingListDetailView from './pages/ShoppingListDetail.jsx'; 
+import LoginScreen from './components/LoginScreen'; 
 
-const initialShoppingLists = [
-{
-id: 1,
-name: 'Weekly Groceries',
-participants: [
-{ id: 1, name: 'Alice' },
-{ id: 2, name: 'Bob' }
-],
-items: [
-{ id: 1, name: 'Milk', done: false },
-{ id: 2, name: 'Eggs', done: true },
-{ id: 3, name: 'Bread', done: false }
-]
-},
-{
-id: 2,
-name: 'Party Supplies',
-participants: [
-{ id: 3, name: 'Charlie' }
-],
-items: [
-{ id: 4, name: 'Soda', done: false },
-{ id: 5, name: 'Chips', done: false }
-]
+export default function App() {
+  const [currentUser, setCurrentUser] = useState(null); 
+  const [currentView, setCurrentView] = useState('list'); 
+  const [selectedListId, setSelectedListId] = useState(null);
+  const [lists, setLists] = useState(initialLists);
+
+  const handleLogin = (user) => {
+    setCurrentUser(user); 
+    setCurrentView('list'); 
+    setSelectedListId(null);
+  };
+ 
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setCurrentView('list');
+    setSelectedListId(null);
+  };
+
+  const handleSelectList = (listId) => {
+    setSelectedListId(listId);
+    setCurrentView('detail');
+  };
+
+  const handleBackToList = () => {
+    setCurrentView('list');
+    setSelectedListId(null);
+  };
+
+  if (!currentUser) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
+  const selectedList = lists.find(list => list.id === selectedListId);
+
+  return (
+    <div className="bg-gray-100 min-h-screen">
+      <div className="bg-white p-4 shadow-md">
+        <div className="max-w-6xl mx-auto flex justify-between items-center">
+          <h1 className="text-xl font-bold text-blue-600">Shopping App</h1>
+          
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className="font-semibold">{currentUser.name}</p>
+              <p className="text-sm text-gray-600">{currentUser.email} ({currentUser.role})</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              Log Out
+            </button>
+          </div>
+          
+        </div>
+      </div>
+      
+      {currentView === 'list' && (
+        <ShoppingListView
+          currentUser={currentUser} 
+          onSelectList={handleSelectList}
+          lists={lists}
+          setLists={setLists}
+        />
+      )}
+      {currentView === 'detail' && (
+        <ShoppingListDetailView
+          currentUser={currentUser} 
+          list={selectedList} 
+          onBack={handleBackToList}
+          lists={lists}
+          setLists={setLists}
+        />
+      )}
+    </div>
+  );
 }
-];
-
-function App() {
-const [shoppingLists, setShoppingLists] = useState(initialShoppingLists);
-
-
-const selectedList = shoppingLists[0];
-
-return (
-<div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}> <h1>My Shopping App</h1> <ShoppingListDetail
-     list={selectedList}
-     lists={shoppingLists}
-     setLists={setShoppingLists}
-   /> </div>
-);
-}
-
-export default App;
