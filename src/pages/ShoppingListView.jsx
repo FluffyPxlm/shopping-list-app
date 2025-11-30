@@ -1,41 +1,86 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ShoppingListTile from '../components/ShoppingListTile';
 import CreateListModal from '../components/CreateListModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
+import { api } from '../utils/api';
 
-export default function ShoppingListView({ currentUser, onSelectList, lists, setLists }) {
+export default function ShoppingListView({ currentUser, onSelectList }) {
+  const [lists, setLists] = useState([]);
+  const [loading, setLoading] = useState(true); 
+  const [error, setError] = useState(null);     
+
   const [showArchived, setShowArchived] = useState(false);
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
+  useEffect(() => {
+    loadLists();
+  }, []);
+
+  const loadLists = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getLists();
+      setLists(data);
+      setError(null); 
+    } catch (err) {
+      setError("Failed to load lists: " + err.message);
+    } finally {
+      setLoading(false); 
+    }
+  };
   const filteredLists = useMemo(() => {
     return lists
       .filter((list) => showArchived || !list.isArchived)
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [lists, showArchived]);
-
-  const handleCreateList = (name) => {
-    const newList = {
-      id: Date.now().toString(),
-      name: name,
-      isArchived: false,
-      ownerId: currentUser.email, 
-      participants: [], 
-      items: []
-    };
-    setLists([newList, ...lists]);
-  };
-
-  const handleDeleteRequest = (id, name) => {
-    setDeleteTarget({ id, name });
-  };
-
-  const handleConfirmDelete = () => {
-    if (deleteTarget) {
-      setLists(lists.filter((list) => list.id !== deleteTarget.id));
-      setDeleteTarget(null);
+  const handleCreateList = async (name) => {
+    try {
+      const newList = {
+        name: name,
+        isArchived: false,
+        ownerId: currentUser.email,
+        participants: [],
+        items: []
+      };
+      const createdList = await api.createList(newList);
+      setLists([createdList, ...lists]);
+    } catch (err) {
+      alert("Error creating list: " + err.message);
     }
   };
+
+  const handleDeleteRequest = (id, name) => setDeleteTarget({ id, name });
+
+  const handleConfirmDelete = async () => {
+    if (deleteTarget) {
+      try {
+        await api.deleteList(deleteTarget.id);
+        setLists(lists.filter((list) => list.id !== deleteTarget.id));
+        setDeleteTarget(null);
+      } catch (err) {
+        alert("Error deleting list: " + err.message);
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 text-center text-red-600">
+        <h2 className="text-2xl font-bold mb-2">Error</h2>
+        <p>{error}</p>
+        <button onClick={loadLists} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded">Retry</button>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -65,7 +110,7 @@ export default function ShoppingListView({ currentUser, onSelectList, lists, set
             <ShoppingListTile
               key={list.id}
               list={list}
-              currentUser={currentUser} 
+              currentUser={currentUser}
               onSelect={onSelectList}
               onDelete={handleDeleteRequest}
             />

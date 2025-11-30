@@ -1,4 +1,5 @@
 import React from 'react';
+
 export default function ShoppingListTile({ list, currentUser, onSelect, onDelete }) {
   const isOwner = list.ownerId === currentUser.email;
 
